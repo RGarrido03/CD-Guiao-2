@@ -135,7 +135,7 @@ class DHTNode(threading.Thread):
         self.logger.debug("Get successor: %s", args)
         #TODO Implement processing of SUCCESSOR message
         pass
-                
+
     def notify(self, args):
         """Process NOTIFY message.
             Updates predecessor pointers.
@@ -187,11 +187,12 @@ class DHTNode(threading.Thread):
         key_hash = dht_hash(key)
         self.logger.debug("Put: %s %s", key, key_hash)
 
-        #TODO Replace next code:
-        self.send(address, {"method": "NACK"})
+        self.keystore[key_hash] = value
+
+        self.send(address, {"method": "ACK"})
 
 
-    def get(self, key, address):
+    def get(self, key, address) -> None:
         """Retrieve value from DHT.
 
         Parameters:
@@ -201,8 +202,15 @@ class DHTNode(threading.Thread):
         key_hash = dht_hash(key)
         self.logger.debug("Get: %s %s", key, key_hash)
 
-        #TODO Replace next code:
-        self.send(address, {"method": "NACK"})
+        value = self.keystore[key_hash]
+
+        if value is None:
+            self.send(address, {"method": "NACK"})
+            return
+
+        value = self.keystore[key_hash]
+        self.send(address, {"method": "ACK", "args": value})
+
 
 
     def run(self):
