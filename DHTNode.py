@@ -127,15 +127,26 @@ class DHTNode(threading.Thread):
             self.send(self.successor_addr, {"method": "JOIN_REQ", "args": args})
         self.logger.info(self)
 
-    def get_successor(self, args):
+    def get_successor(self, args: dict) -> None:
         """Process SUCCESSOR message.
 
         Parameters:
             args (dict): addr and id of the node asking
         """
 
+        self.send(
+            (
+                self.predecessor_addr
+                if self.predecessor_addr is not None
+                else self.successor_addr
+            ),
+            {
+                "method": "SUCCESSOR",
+                "args": {"id": args["id"], "from": args["addr"]},
+            },
+        )
+
         self.logger.debug("Get successor: %s", args)
-        #TODO Implement processing of SUCCESSOR message
         pass
 
     def notify(self, args):
