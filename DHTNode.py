@@ -104,7 +104,7 @@ class DHTNode(threading.Thread):
             self.predecessor_id = None
             self.predecessor_addr = None
 
-        self.finger_table = None  # TODO create finger_table
+        self.finger_table = FingerTable(self.identification, address)
 
         self.keystore = {}  # Where all data is stored
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -140,7 +140,10 @@ class DHTNode(threading.Thread):
         if self.identification == self.successor_id:  # I'm the only node in the DHT
             self.successor_id = identification
             self.successor_addr = addr
-            # TODO update finger table
+            # TODO update finger table index
+            self.finger_table.update(
+                self.finger_table.getIdxFromId(identification), identification, addr
+            )
             args = {"successor_id": self.identification, "successor_addr": self.addr}
             self.send(addr, {"method": "JOIN_REP", "args": args})
         elif contains(self.identification, self.successor_id, identification):
@@ -151,6 +154,9 @@ class DHTNode(threading.Thread):
             self.successor_id = identification
             self.successor_addr = addr
             # TODO update finger table
+            self.finger_table.update(
+                self.finger_table.getIdxFromId(identification), identification, addr
+            )
             self.send(addr, {"method": "JOIN_REP", "args": args})
         else:
             self.logger.debug("Find Successor(%d)", args["id"])
@@ -224,7 +230,8 @@ class DHTNode(threading.Thread):
             # Update our successor
             self.successor_id = from_id
             self.successor_addr = addr
-            # TODO update finger table
+            # TODO update finger table update(self, index: int, node_id: int, node_addr: tuple[str, int])
+            # self.finger_table.update()
 
         # notify successor of our existence, so it can update its predecessor record
         args = {"predecessor_id": self.identification, "predecessor_addr": self.addr}
@@ -284,7 +291,8 @@ class DHTNode(threading.Thread):
                     args = output["args"]
                     self.successor_id = args["successor_id"]
                     self.successor_addr = args["successor_addr"]
-                    # TODO fill finger table
+                    # TODO update finger table
+                    self.finger_table.update()
                     self.inside_dht = True
                     self.logger.info(self)
 
