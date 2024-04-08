@@ -4,6 +4,7 @@ import socket
 import threading
 import logging
 import pickle
+import math
 from utils import dht_hash, contains
 
 
@@ -12,26 +13,55 @@ class FingerTable:
 
     def __init__(self, node_id, node_addr, m_bits=10):
         """Initialize Finger Table."""
-        pass
+        self.node_id = node_id
+        self.node_addr = node_addr
+        self.m_bits = m_bits
 
-    def fill(self, node_id, node_addr):
+        # key: 1, ..., m_bits
+        # value: (node_id, (host, port))
+        self.finger_table: dict[int, tuple[int, tuple[str, int]]] = {
+            i: ((node_id + 2 ** (i - 1)) % (2**m_bits), node_addr)
+            for i in range(1, m_bits + 1)
+        }
+
+    def fill(self, node_id: int, node_addr: tuple[str, int]) -> None:
         """Fill all entries of finger_table with node_id, node_addr."""
-        pass
+        self.finger_table = {i: (node_id, node_addr) for i in range(1, self.m_bits + 1)}
 
-    def update(self, index, node_id, node_addr):
+    def update(self, index: int, node_id: int, node_addr: tuple[str, int]) -> None:
         """Update index of table with node_id and node_addr."""
-        pass
+        self.finger_table[index] = (node_id, node_addr)
 
-    def find(self, identification):
-        """Get node address of closest preceding node (in finger table) of identification."""
-        pass
+    def find(self, identification: int) -> tuple[str, int]:
+        """Get node address of the closest preceding node (in finger table) of identification."""
+        for i in self.finger_table.keys():
+            if self.finger_table[i][0] >= identification:
+                return (
+                    self.finger_table[i - 1][1]
+                    if i - 1 > 0
+                    else self.finger_table[i][1]
+                )
+        return self.finger_table[1][1]
 
     def refresh(self):
         """Retrieve finger table entries requiring refresh."""
-        pass
+        new_finger_table = {
+            i: (
+                (self.node_id + 2 ** (i - 1)) % (2**self.m_bits),
+                self.find((self.node_id + (2 ** (i - 1)))),
+            )
+            for i in range(1, self.m_bits + 1)
+        }
 
-    def getIdxFromId(self, id):
-        pass
+        self.finger_table = new_finger_table
+
+        return [(idx, id, addr) for idx, (id, addr) in self.finger_table.items()]
+
+    def getIdxFromId(self, id: int) -> int:
+        """Get index of finger table entry corresponding to id."""
+        # Find the index of the finger table entry that is closest to id
+        offset = 2**self.m_bits if id < self.node_id else 0
+        return int(math.log2(id - self.node_id + offset) + 1)
 
     def __repr__(self):
         pass
@@ -41,7 +71,7 @@ class FingerTable:
         """return the finger table as a list of tuples: (identifier, (host, port)).
         NOTE: list index 0 corresponds to finger_table index 1
         """
-        pass
+        return list(self.finger_table.values())
 
 
 class DHTNode(threading.Thread):
