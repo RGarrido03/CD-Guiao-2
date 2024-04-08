@@ -133,7 +133,23 @@ class DHTNode(threading.Thread):
         Parameters:
             args (dict): addr and id of the node asking
         """
+        self.logger.debug("Get successor: %s", args)
 
+        if contains(self.identification, self.successor_id, args["id"]):
+            self.send(
+                args["addr"],
+                {
+                    "method": "SUCCESSOR_REP",
+                    "args": {
+                        "req_id": args["id"],
+                        "successor_id": self.successor_id,
+                        "successor_addr": self.successor_addr,
+                    },
+                },
+            )
+            return
+
+        # TODO: Check address to send, after finger tables are done
         self.send(
             (
                 self.predecessor_addr
@@ -145,9 +161,6 @@ class DHTNode(threading.Thread):
                 "args": {"id": args["id"], "from": args["addr"]},
             },
         )
-
-        self.logger.debug("Get successor: %s", args)
-        pass
 
     def notify(self, args):
         """Process NOTIFY message.
