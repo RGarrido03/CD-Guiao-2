@@ -64,7 +64,7 @@ class FingerTable:
         return int(math.log2(id - self.node_id + offset) + 1)
 
     def __repr__(self):
-        pass
+        return str(self.as_list)
 
     @property
     def as_list(self):
