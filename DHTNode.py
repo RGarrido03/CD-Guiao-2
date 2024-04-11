@@ -53,6 +53,8 @@ class FingerTable:
             for i in range(1, self.m_bits + 1)
         }
 
+        print(new_finger_table)
+
         self.finger_table = new_finger_table
 
         return [(idx, id, addr) for idx, (id, addr) in self.finger_table.items()]
