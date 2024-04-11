@@ -48,12 +48,10 @@ class FingerTable:
         new_finger_table = {
             i: (
                 (self.node_id + 2 ** (i - 1)) % (2**self.m_bits),
-                self.find((self.node_id + (2 ** (i - 1)))),
+                self.finger_table[i][1],
             )
             for i in range(1, self.m_bits + 1)
         }
-
-        print(new_finger_table)
 
         self.finger_table = new_finger_table
 
