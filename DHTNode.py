@@ -185,13 +185,8 @@ class DHTNode(threading.Thread):
             )
             return
 
-        # TODO: Check address to send, after finger tables are done
         self.send(
-            (
-                self.predecessor_addr
-                if self.predecessor_addr is not None
-                else self.successor_addr
-            ),
+            self.finger_table.find(args["id"]),
             {
                 "method": "SUCCESSOR",
                 "args": {"id": args["id"], "from": args["addr"]},
