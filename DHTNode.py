@@ -114,6 +114,7 @@ class DHTNode(threading.Thread):
             self.predecessor_id = None
             self.predecessor_addr = None
 
+        # [DONE] TODO create finger_table
         self.finger_table = FingerTable(self.identification, address)
 
         self.keystore: dict[int, Any] = {}  # Where all data is stored
@@ -161,7 +162,7 @@ class DHTNode(threading.Thread):
             }
             self.successor_id = identification
             self.successor_addr = addr
-            # TODO update finger table
+            # [Done] TODO update finger table
             self.finger_table.fill(identification, addr)
             self.send(addr, {"method": "JOIN_REP", "args": args})
         else:
@@ -177,6 +178,7 @@ class DHTNode(threading.Thread):
         """
         self.logger.debug("Get successor: %s", args)
 
+        # [DONE] TODO Implement processing of SUCCESSOR message
         if contains(self.identification, self.successor_id, args["id"]):
             self.send(
                 args["from"],
@@ -258,6 +260,7 @@ class DHTNode(threading.Thread):
         key_hash = dht_hash(key)
         self.logger.debug("Put: %s %s", key, key_hash)
 
+        # [DONE] TODO Replace next code:
         if contains(self.predecessor_id, self.identification, key_hash):
             self.logger.debug(
                 'Storing "%s" (hash %s) in %s', key, key_hash, self.identification
@@ -285,6 +288,7 @@ class DHTNode(threading.Thread):
         key_hash = dht_hash(key)
         self.logger.debug("Get: %s %s", key, key_hash)
 
+        # [DONE] TODO Replace next code:
         if contains(self.predecessor_id, self.identification, key_hash):
             self.logger.debug(
                 'Retrieving "%s" (hash %s) from %s', key, key_hash, self.identification
