@@ -231,14 +231,21 @@ class DHTNode(threading.Thread):
             # Update our successor
             self.successor_id = from_id
             self.successor_addr = addr
-            # TODO update finger table
-            # self.finger_table.update()
+            # [DONE] TODO update finger table
+            self.finger_table.update(
+                self.finger_table.getIdxFromId(from_id), from_id, addr
+            )
 
         # notify successor of our existence, so it can update its predecessor record
         args = {"predecessor_id": self.identification, "predecessor_addr": self.addr}
         self.send(self.successor_addr, {"method": "NOTIFY", "args": args})
 
-        # TODO refresh finger_table
+        # [DONE] TODO refresh finger_table
+        for idx, id, addr in self.finger_table.refresh():
+            self.send(
+                addr,
+                {"method": "SUCCESSOR", "args": {"id": id, "from": self.addr}},
+            )
 
     def put(self, key: Any, value: Any, address: Address) -> None:
         """Store value in DHT.
