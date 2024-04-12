@@ -179,7 +179,7 @@ class DHTNode(threading.Thread):
 
         if contains(self.identification, self.successor_id, args["id"]):
             self.send(
-                args["addr"],
+                args["from"],
                 {
                     "method": "SUCCESSOR_REP",
                     "args": {
@@ -195,7 +195,7 @@ class DHTNode(threading.Thread):
             self.finger_table.find(args["id"]),
             {
                 "method": "SUCCESSOR",
-                "args": {"id": args["id"], "from": args["addr"]},
+                "args": {"id": args["id"], "from": args["from"]},
             },
         )
 
