@@ -258,9 +258,22 @@ class DHTNode(threading.Thread):
         key_hash = dht_hash(key)
         self.logger.debug("Put: %s %s", key, key_hash)
 
-        self.keystore[key_hash] = value
+        if contains(self.predecessor_id, self.identification, key_hash):
+            self.logger.debug(
+                'Storing "%s" (hash %s) in %s', key, key_hash, self.identification
+            )
+            self.keystore[key] = value
+            self.send(address, {"method": "ACK"})
+            return
 
-        self.send(address, {"method": "ACK"})
+        self.logger.debug("Forwarding %s from %s", key_hash, self.identification)
+        self.send(
+            self.finger_table.find(key_hash),
+            {
+                "method": "PUT",
+                "args": {"key": key, "value": value, "from": address},
+            },
+        )
 
     def get(self, key: Any, address: Address) -> None:
         """Retrieve value from DHT.
