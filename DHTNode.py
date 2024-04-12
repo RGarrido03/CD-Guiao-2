@@ -273,6 +273,19 @@ class DHTNode(threading.Thread):
 
         self.send(address, {"method": "ACK", "args": value})
 
+    def process_successor_rep(self, args: Args) -> None:
+        """Process SUCCESSOR_REP message.
+
+        Get the successor of the node with id req_id and update the finger table.
+
+        Parameters:
+        args: req_id, successor_id, successor_addr
+        """
+        self.logger.debug("Process SUCCESSOR_REP message: %s", args)
+
+        idx = self.finger_table.getIdxFromId(args["req_id"])
+        self.finger_table.update(idx, args["successor_id"], args["successor_addr"])
+
     def run(self) -> None:
         self.socket.bind(self.addr)
 
@@ -325,8 +338,8 @@ class DHTNode(threading.Thread):
                     # Initiate stabilize protocol
                     self.stabilize(output["args"], addr)
                 elif output["method"] == "SUCCESSOR_REP":
-                    # TODO Implement processing of SUCCESSOR_REP
-                    pass
+                    # [DONE] TODO Implement processing of SUCCESSOR_REP
+                    self.process_successor_rep(output["args"])
             else:  # timeout occurred, lets run the stabilize algorithm
                 # Ask successor for predecessor, to start the stabilize process
                 self.send(self.successor_addr, {"method": "PREDECESSOR"})
