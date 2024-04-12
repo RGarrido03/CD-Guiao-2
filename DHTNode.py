@@ -5,34 +5,39 @@ import threading
 import logging
 import pickle
 import math
+from typing import Optional, Any
+
 from utils import dht_hash, contains
+
+Address = tuple[str, int]
+Args = dict[str, Any]
 
 
 class FingerTable:
     """Finger Table."""
 
-    def __init__(self, node_id, node_addr, m_bits=10):
+    def __init__(self, node_id: int, node_addr: Address, m_bits: int = 10):
         """Initialize Finger Table."""
         self.node_id = node_id
         self.node_addr = node_addr
         self.m_bits = m_bits
 
         # key: 1, ..., m_bits
-        # value: (node_id, (host, port))
-        self.finger_table: dict[int, tuple[int, tuple[str, int]]] = {
+        # value: (node_id, address)
+        self.finger_table: dict[int, tuple[int, Address]] = {
             i: ((node_id + 2 ** (i - 1)) % (2**m_bits), node_addr)
             for i in range(1, m_bits + 1)
         }
 
-    def fill(self, node_id: int, node_addr: tuple[str, int]) -> None:
+    def fill(self, node_id: int, node_addr: Address) -> None:
         """Fill all entries of finger_table with node_id, node_addr."""
         self.finger_table = {i: (node_id, node_addr) for i in range(1, self.m_bits + 1)}
 
-    def update(self, index: int, node_id: int, node_addr: tuple[str, int]) -> None:
+    def update(self, index: int, node_id: int, node_addr: Address) -> None:
         """Update index of table with node_id and node_addr."""
         self.finger_table[index] = (node_id, node_addr)
 
-    def find(self, identification: int) -> tuple[str, int]:
+    def find(self, identification: int) -> Address:
         """Get node address of the closest preceding node (in finger table) of identification."""
         for i in self.finger_table.keys():
             if self.finger_table[i][0] >= identification:
@@ -43,7 +48,7 @@ class FingerTable:
                 )
         return self.finger_table[1][1]
 
-    def refresh(self):
+    def refresh(self) -> list[tuple[int, int, Address]]:
         """Retrieve finger table entries requiring refresh."""
         new_finger_table = {
             i: (
@@ -63,11 +68,11 @@ class FingerTable:
         offset = 2**self.m_bits if id < self.node_id else 0
         return int(math.log2(id - self.node_id + offset) + 1)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.as_list)
 
     @property
-    def as_list(self):
+    def as_list(self) -> list[tuple[int, Address]]:
         """return the finger table as a list of tuples: (identifier, (host, port)).
         NOTE: list index 0 corresponds to finger_table index 1
         """
@@ -77,7 +82,12 @@ class FingerTable:
 class DHTNode(threading.Thread):
     """DHT Node Agent."""
 
-    def __init__(self, address, dht_address=None, timeout=3):
+    def __init__(
+        self,
+        address: Address,
+        dht_address: Address = None,
+        timeout: int = 3,
+    ):
         """Constructor
 
         Parameters:
@@ -106,17 +116,17 @@ class DHTNode(threading.Thread):
 
         self.finger_table = FingerTable(self.identification, address)
 
-        self.keystore = {}  # Where all data is stored
+        self.keystore: dict[int, Any] = {}  # Where all data is stored
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(timeout)
         self.logger = logging.getLogger("Node {}".format(self.identification))
 
-    def send(self, address, msg):
+    def send(self, address: Address, msg: Any) -> None:
         """Send msg to address."""
         payload = pickle.dumps(msg)
         self.socket.sendto(payload, address)
 
-    def recv(self):
+    def recv(self) -> tuple[Optional[bytes], Optional[Address]]:
         """Retrieve msg payload and from address."""
         try:
             payload, addr = self.socket.recvfrom(1024)
@@ -127,7 +137,7 @@ class DHTNode(threading.Thread):
             return None, addr
         return payload, addr
 
-    def node_join(self, args):
+    def node_join(self, args: Args) -> None:
         """Process JOIN_REQ message.
 
         Parameters:
@@ -135,8 +145,8 @@ class DHTNode(threading.Thread):
         """
 
         self.logger.debug("Node join: %s", args)
-        addr = args["addr"]
-        identification = args["id"]
+        addr: Address = args["addr"]
+        identification: int = args["id"]
         if self.identification == self.successor_id:  # I'm the only node in the DHT
             self.successor_id = identification
             self.successor_addr = addr
@@ -159,7 +169,7 @@ class DHTNode(threading.Thread):
             self.send(self.successor_addr, {"method": "JOIN_REQ", "args": args})
         self.logger.info(self)
 
-    def get_successor(self, args: dict) -> None:
+    def get_successor(self, args: Args) -> None:
         """Process SUCCESSOR message.
 
         Parameters:
@@ -189,7 +199,7 @@ class DHTNode(threading.Thread):
             },
         )
 
-    def notify(self, args):
+    def notify(self, args: Args) -> None:
         """Process NOTIFY message.
             Updates predecessor pointers.
 
@@ -205,7 +215,7 @@ class DHTNode(threading.Thread):
             self.predecessor_addr = args["predecessor_addr"]
         self.logger.info(self)
 
-    def stabilize(self, from_id, addr):
+    def stabilize(self, from_id: int, addr: Address) -> None:
         """Process STABILIZE protocol.
             Updates all successor pointers.
 
@@ -221,7 +231,7 @@ class DHTNode(threading.Thread):
             # Update our successor
             self.successor_id = from_id
             self.successor_addr = addr
-            # TODO update finger table update(self, index: int, node_id: int, node_addr: tuple[str, int])
+            # TODO update finger table
             # self.finger_table.update()
 
         # notify successor of our existence, so it can update its predecessor record
@@ -230,7 +240,7 @@ class DHTNode(threading.Thread):
 
         # TODO refresh finger_table
 
-    def put(self, key, value, address):
+    def put(self, key: Any, value: Any, address: Address) -> None:
         """Store value in DHT.
 
         Parameters:
@@ -245,7 +255,7 @@ class DHTNode(threading.Thread):
 
         self.send(address, {"method": "ACK"})
 
-    def get(self, key, address) -> None:
+    def get(self, key: Any, address: Address) -> None:
         """Retrieve value from DHT.
 
         Parameters:
@@ -261,10 +271,9 @@ class DHTNode(threading.Thread):
             self.send(address, {"method": "NACK"})
             return
 
-        value = self.keystore[key_hash]
         self.send(address, {"method": "ACK", "args": value})
 
-    def run(self):
+    def run(self) -> None:
         self.socket.bind(self.addr)
 
         # Loop untiln joining the DHT
