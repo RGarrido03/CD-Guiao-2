@@ -285,13 +285,24 @@ class DHTNode(threading.Thread):
         key_hash = dht_hash(key)
         self.logger.debug("Get: %s %s", key, key_hash)
 
-        value = self.keystore[key_hash]
+        if contains(self.predecessor_id, self.identification, key_hash):
+            self.logger.debug(
+                'Retrieving "%s" (hash %s) from %s', key, key_hash, self.identification
+            )
+            value = self.keystore[key]
 
-        if value is None:
-            self.send(address, {"method": "NACK"})
+            if value is None:
+                self.send(address, {"method": "NACK"})
+                return
+
+            self.send(address, {"method": "ACK", "args": value})
             return
 
-        self.send(address, {"method": "ACK", "args": value})
+        self.logger.debug("Forwarding get %s from %s", key_hash, self.identification)
+        self.send(
+            self.finger_table.find(key_hash),
+            {"method": "GET", "args": {"key": key, "from": address}},
+        )
 
     def process_successor_rep(self, args: Args) -> None:
         """Process SUCCESSOR_REP message.
