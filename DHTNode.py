@@ -75,21 +75,6 @@ class FingerTable:
         """
         return list(self.finger_table.values())
 
-    @property
-    def as_table(self) -> str:
-        """
-        Return the finger table as a table.
-        """
-        a = self.as_list
-
-        return "\n".join(
-            ["+-----+------+---------------------+"]
-            + ["| Bit | Node | Address             |"]
-            + ["|-----|------|---------------------|"]
-            + [f"| {i:3} | {a[i-1][0]:4} | {a[i-1][1]} |" for i in range(1, len(a) + 1)]
-            + ["+-----+------+---------------------+"]
-        )
-
 
 class DHTNode(threading.Thread):
     """DHT Node Agent."""
@@ -165,11 +150,6 @@ class DHTNode(threading.Thread):
             self.successor_addr = addr
             # [DONE] TODO update finger table index
             self.finger_table.fill(identification, addr)
-            self.logger.warning(
-                "Processing JOIN_REQ: first branch.\nCurrent finger table of node %s:\n%s",
-                self.identification,
-                self.finger_table.as_table,
-            )
             args = {"successor_id": self.identification, "successor_addr": self.addr}
             self.send(addr, {"method": "JOIN_REP", "args": args})
         elif contains(self.identification, self.successor_id, identification):
@@ -181,11 +161,6 @@ class DHTNode(threading.Thread):
             self.successor_addr = addr
             # [Done] TODO update finger table
             self.finger_table.fill(identification, addr)
-            self.logger.warning(
-                "Processing JOIN_REQ: second branch.\nCurrent finger table of node %s:\n%s",
-                self.identification,
-                self.finger_table.as_table,
-            )
             self.send(addr, {"method": "JOIN_REP", "args": args})
         else:
             self.logger.debug("Find Successor(%d)", args["id"])
@@ -259,11 +234,6 @@ class DHTNode(threading.Thread):
             self.finger_table.update(
                 self.finger_table.getIdxFromId(from_id), from_id, addr
             )
-            self.logger.warning(
-                "Processing STABILIZE: if branch.\nCurrent finger table of node %s:\n%s",
-                self.identification,
-                self.finger_table.as_table,
-            )
 
         # notify successor of our existence, so it can update its predecessor record
         args = {"predecessor_id": self.identification, "predecessor_addr": self.addr}
@@ -275,11 +245,6 @@ class DHTNode(threading.Thread):
                 addr,
                 {"method": "SUCCESSOR", "args": {"id": id, "from": self.addr}},
             )
-        self.logger.warning(
-            "Processing STABILIZE: after for.\nCurrent finger table of node %s:\n%s",
-            self.identification,
-            self.finger_table.as_table,
-        )
 
     def put(self, key: Any, value: Any, address: Address) -> None:
         """Store value in DHT.
@@ -289,30 +254,19 @@ class DHTNode(threading.Thread):
         value: data to be stored
         address: address where to send ack/nack
         """
-        self.logger.warning(
-            "Processing PUT in node %s with key=%s, value=%s, address=%s, hash=%s.\n"
-            "Current finger table of node %s:\n%s",
-            self.identification,
-            key,
-            value,
-            address,
-            dht_hash(key),
-            self.identification,
-            self.finger_table.as_table,
-        )
         key_hash = dht_hash(key)
         self.logger.debug("Put: %s %s", key, key_hash)
 
         # [DONE] TODO Replace next code:
         if contains(self.predecessor_id, self.identification, key_hash):
-            self.logger.warning(
+            self.logger.debug(
                 'Storing "%s" (hash %s) in %s', key, key_hash, self.identification
             )
             self.keystore[key] = value
             self.send(address, {"method": "ACK"})
             return
 
-        self.logger.warning("Forwarding %s from %s", key_hash, self.identification)
+        self.logger.debug("Forwarding %s from %s", key_hash, self.identification)
         self.send(
             self.finger_table.find(key_hash),
             {
@@ -363,11 +317,6 @@ class DHTNode(threading.Thread):
 
         idx = self.finger_table.getIdxFromId(args["req_id"])
         self.finger_table.update(idx, args["successor_id"], args["successor_addr"])
-        self.logger.warning(
-            "Processing SUCCESSOR_REP.\nCurrent finger table of node %s:\n%s",
-            self.identification,
-            self.finger_table.as_table,
-        )
 
     def run(self) -> None:
         self.socket.bind(self.addr)
@@ -389,11 +338,6 @@ class DHTNode(threading.Thread):
                     self.successor_addr = args["successor_addr"]
                     # [DONE] TODO fill finger table
                     self.finger_table.fill(self.successor_id, self.successor_addr)
-                    self.logger.warning(
-                        "Run method.\nCurrent finger table of node %s:\n%s",
-                        self.identification,
-                        self.finger_table.as_table,
-                    )
                     self.inside_dht = True
                     self.logger.info(self)
 
