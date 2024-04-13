@@ -36,14 +36,14 @@ class FingerTable:
 
     def find(self, identification: int) -> Address:
         """Get node address of the closest preceding node (in finger table) of identification."""
-        for i in self.finger_table.keys():
-            if self.finger_table[i][0] >= identification:
-                return (
-                    self.finger_table[i - 1][1]
-                    if i - 1 > 0
-                    else self.finger_table[i][1]
-                )
-        return self.finger_table[1][1]
+        return next(
+            (
+                self.finger_table[i][1]
+                for i in reversed(self.finger_table.keys())
+                if contains(self.finger_table[i][0], self.node_id, identification)
+            ),
+            self.finger_table[1][1],
+        )
 
     def refresh(self) -> list[tuple[int, int, Address]]:
         """Retrieve finger table entries requiring refresh."""
