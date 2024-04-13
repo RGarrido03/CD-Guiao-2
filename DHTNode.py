@@ -24,10 +24,7 @@ class FingerTable:
 
         # key: 1, ..., m_bits
         # value: (node_id, address)
-        self.finger_table: dict[int, tuple[int, Address]] = {
-            i: ((node_id + 2 ** (i - 1)) % (2**m_bits), node_addr)
-            for i in range(1, m_bits + 1)
-        }
+        self.finger_table: dict[int, tuple[int, Address]] = {}
 
     def fill(self, node_id: int, node_addr: Address) -> None:
         """Fill all entries of finger_table with node_id, node_addr."""
